@@ -1,10 +1,26 @@
+import os
 from crewai import Agent, Task, Crew, Process
 
-def create_sava_crew():
+def create_sava_crew(provider="openai"):
     """
     Cria e configura o Sistema Multi-Agente de Validação Acadêmica (SAVA)
-    utilizando o framework CrewAI, conforme as especificações do documento Inicial.md.
+    utilizando o framework CrewAI.
     """
+    
+    # ==========================================
+    # 0. Configuração da Inteligência Artificial
+    # ==========================================
+    llm = None
+    if provider == "openai":
+        llm = "gpt-4o"
+    elif provider == "gemini":
+        # Remove variáveis de ambiente do Google Cloud que forçam o uso do Vertex AI
+        # para garantir que o CrewAI use a API Key do Google AI Studio corretamente
+        os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+        os.environ.pop("GOOGLE_CLOUD_PROJECT", None)
+        llm = "gemini/gemini-2.5-pro"
+    elif provider == "anthropic":
+        llm = "anthropic/claude-3-5-sonnet-20240620"
 
     # ==========================================
     # 1. Definição dos Agentes (Backstory & Tasks)
@@ -15,7 +31,8 @@ def create_sava_crew():
         goal='Garantir a conformidade da monografia com as normas técnicas (ABNT, APA, Vancouver) e verificar se todas as citações possuem referência bibliográfica correspondente.',
         backstory='The Standard Guardian. Você é um especialista meticuloso em normas técnicas e documentação acadêmica. Sua missão é garantir que a forma e a estrutura do trabalho impecáveis.',
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=llm
     )
 
     agente_metodologico = Agent(
@@ -23,7 +40,8 @@ def create_sava_crew():
         goal='Auditar o rigor científico do trabalho, assegurando que há coerência lógica entre o problema de pesquisa, os objetivos e a metodologia aplicada.',
         backstory='The Logic Master. Você é um Doutor em Metodologia Científica com ampla visão interdisciplinar. Seu papel é garantir que o método científico escolhido realmente responda à pergunta da pesquisa e que as conclusões sejam baseadas em dados.',
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=llm
     )
 
     agente_analista_dados = Agent(
@@ -31,7 +49,8 @@ def create_sava_crew():
         goal='Auditar a consistência numérica do documento, validar a interpretação estatística, tabelas, gráficos, modelos e dados apresentados.',
         backstory='The Data Auditor. Especialista sênior em análise quantitativa e qualitativa. Sua paixão é a precisão dos dados, você não deixa passar uma inconsistência entre texto e tabelas.',
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=llm
     )
 
     agente_integridade = Agent(
@@ -39,7 +58,8 @@ def create_sava_crew():
         goal='Detectar possíveis indícios de plágio, uso indevido de IA generativa não assistida, além de avaliar a fluidez do texto e originalidade.',
         backstory='The Ethics Officer. Especialista em linguística forense e ética acadêmica. Sua missão é proteger a integridade institucional e a originalidade da contribuição científica.',
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=llm
     )
 
     agente_revisor_final = Agent(
@@ -47,7 +67,8 @@ def create_sava_crew():
         goal='Consolidar os inputs e pareceres dos demais agentes, avaliar coesão e clareza e emitir o Parecer de Qualificação definitivo (Aprovado, Aprovado com Ressalvas ou Reprovado).',
         backstory='The Chief Editor. Editor experiente de periódicos científicos de alto impacto. Você tem a palavra final sobre a aceitação do documento, organizando as demandas de melhoria de forma clara para o autor.',
         verbose=True,
-        allow_delegation=False
+        allow_delegation=False,
+        llm=llm
     )
 
 
@@ -60,21 +81,21 @@ def create_sava_crew():
         description='Comparar a estrutura do documento {monografia_path} com os templates da instituição e validar o pareamento exato entre citações no texto e referências bibliográficas.',
         expected_output='Um "Relatório de Inconformidades Estruturais" listando erros de formatação e citações órfãs.',
         agent=agente_normatizador,
-        async_execution=True # Executa paralelamente
+        async_execution=False # Desativado para evitar limite de requisições (Error 429)
     )
 
     tarefa_analise_dados = Task(
         description='Auditar tabelas, gráficos e estatísticas no documento {monografia_path}. Checar se a interpretação de fórmulas e modelos está correta e se os números citados no texto refletem os das tabelas.',
         expected_output='Uma "Nota de Auditoria de Dados", listando as divergências numéricas encontradas (se houver).',
         agent=agente_analista_dados,
-        async_execution=True # Executa paralelamente
+        async_execution=False # Desativado para evitar limite de requisições (Error 429)
     )
 
     tarefa_integridade = Task(
         description='Varrer o documento completo {monografia_path} buscando por quebras de padrão de escrita, fluidez artificial (indício de IA) ou trechos não originais (plágio).',
         expected_output='Um "Score de Originalidade" acompanhado de alertas de risco.',
         agent=agente_integridade,
-        async_execution=True # Executa paralelamente
+        async_execution=False # Desativado para evitar limite de requisições (Error 429)
     )
 
     # Fase Sequencial (Auditoria Metodológica e Revisão Final)
@@ -118,13 +139,28 @@ def create_sava_crew():
 
 if __name__ == "__main__":
     print("Iniciando o Sistema Multi-Agente de Validação Acadêmica (SAVA)...")
+    
+    # Solicita o caminho para um arquivo Markdown (.md) local ao usuário
+    caminho_arquivo = input("Insira o caminho para o arquivo Markdown (.md) da monografia (ou pressione Enter para usar o Inicial.md de teste): ").strip()
+    
+    if not caminho_arquivo:
+        caminho_arquivo = 'Inicial.md'
+        print("Nenhum caminho fornecido. Usando o arquivo de teste local (Inicial.md).")
+    elif not os.path.exists(caminho_arquivo):
+        print(f"Erro: O arquivo '{caminho_arquivo}' não foi encontrado.")
+        exit(1)
+    else:
+        print(f"Documento '{caminho_arquivo}' selecionado com sucesso!")
+
     crew = create_sava_crew()
     
-    # Exemplo de Ingestão de documento
-    # inputs = {'monografia_path': 'arquivos/tese_joao_v1.pdf'}
-    # resultado_final = crew.kickoff(inputs=inputs)
-    # print("######################")
-    # print("RESULTADO DA AVALIAÇÃO")
-    # print("######################")
-    # print(resultado_final)
-    print("Agentes construídos com sucesso e prontos para operação.")
+    inputs = {'monografia_path': caminho_arquivo}
+    
+    print("\nIniciando a análise (isso pode demorar um pouco)...")
+    resultado_final = crew.kickoff(inputs=inputs)
+    
+    print("\n######################")
+    print("RESULTADO DA AVALIAÇÃO")
+    print("######################\n")
+    print(resultado_final)
+    print("\nAgentes construídos e executados com sucesso.")
