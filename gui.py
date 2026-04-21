@@ -43,12 +43,21 @@ def on_ai_change(event):
     provider = combo_ai.get()
     env_var = get_env_var_name(provider)
     
-    # Atualiza a label
+    # Atualiza modelos disponíveis
     if provider == "ChatGPT (OpenAI)":
+        modelos = ["gpt-4o", "gpt-4-turbo", "gpt-4o-mini"]
+        combo_model.config(values=modelos, state="readonly")
+        combo_model.set(modelos[0])
         label_token.config(text="Sua Chave OpenAI (sk-...):")
     elif provider == "Gemini (Google)":
+        modelos = ["gemini/gemini-2.5-pro", "gemini/gemini-3.1-pro-preview", "gemini/gemini-1.5-pro-latest", "gemini/gemini-1.5-flash-latest"]
+        combo_model.config(values=modelos, state="readonly")
+        combo_model.set(modelos[0])
         label_token.config(text="Sua Chave Gemini:")
     elif provider == "Claude (Anthropic)":
+        modelos = ["anthropic/claude-3-5-sonnet-20240620", "anthropic/claude-3-opus-20240229", "anthropic/claude-3-haiku-20240307"]
+        combo_model.config(values=modelos, state="readonly")
+        combo_model.set(modelos[0])
         label_token.config(text="Sua Chave Claude (sk-ant-...):")
         
     # Limpa e tenta preencher com o token existente
@@ -107,13 +116,14 @@ def executar_sava():
     text_output.insert(tk.END, f"Iniciando a Inteligência Artificial ({provider_str})... Por favor, aguarde. Isso pode demorar alguns minutos.\n\n")
     
     # Roda em uma thread separada para não travar (congelar) a janela principal
-    threading.Thread(target=rodar_script, args=(arquivo, provider_id), daemon=True).start()
+    modelo_selecionado = combo_model.get()
+    threading.Thread(target=rodar_script, args=(arquivo, provider_id, modelo_selecionado), daemon=True).start()
 
-def rodar_script(arquivo, provider_id):
+def rodar_script(arquivo, provider_id, modelo_selecionado):
     try:
         # Importa a função do seu arquivo main.py
         from main import create_sava_crew
-        crew = create_sava_crew(provider=provider_id)
+        crew = create_sava_crew(provider=provider_id, model=modelo_selecionado)
         
         inputs = {'monografia_path': arquivo}
         resultado = crew.kickoff(inputs=inputs)
@@ -147,6 +157,14 @@ opcoes_ai = ["ChatGPT (OpenAI)", "Gemini (Google)", "Claude (Anthropic)"]
 combo_ai = ttk.Combobox(frame_ai, values=opcoes_ai, state="readonly", width=30)
 combo_ai.pack(side="left", padx=10)
 combo_ai.set(opcoes_ai[0]) # Default: ChatGPT
+
+tk.Label(frame_ai, text="Modelo:").pack(side="left", padx=(10, 2))
+combo_model = ttk.Combobox(frame_ai, state="readonly", width=30)
+combo_model.pack(side="left", padx=10)
+# Inicializa os valores do ChatGPT
+combo_model.config(values=["gpt-4o", "gpt-4-turbo", "gpt-4o-mini"])
+combo_model.set("gpt-4o")
+
 combo_ai.bind("<<ComboboxSelected>>", on_ai_change)
 
 # Frame 2: Token da IA

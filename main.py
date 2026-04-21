@@ -1,7 +1,7 @@
 import os
 from crewai import Agent, Task, Crew, Process
 
-def create_sava_crew(provider="openai"):
+def create_sava_crew(provider="openai", model=None):
     """
     Cria e configura o Sistema Multi-Agente de Validação Acadêmica (SAVA)
     utilizando o framework CrewAI.
@@ -12,15 +12,15 @@ def create_sava_crew(provider="openai"):
     # ==========================================
     llm = None
     if provider == "openai":
-        llm = "gpt-4o"
+        llm = model if model else "gpt-4o"
     elif provider == "gemini":
         # Remove variáveis de ambiente do Google Cloud que forçam o uso do Vertex AI
         # para garantir que o CrewAI use a API Key do Google AI Studio corretamente
         os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
         os.environ.pop("GOOGLE_CLOUD_PROJECT", None)
-        llm = "gemini/gemini-2.5-pro"
+        llm = model if model else "gemini/gemini-2.5-pro"
     elif provider == "anthropic":
-        llm = "anthropic/claude-3-5-sonnet-20240620"
+        llm = model if model else "anthropic/claude-3-5-sonnet-20240620"
 
     # ==========================================
     # 1. Definição dos Agentes (Backstory & Tasks)
