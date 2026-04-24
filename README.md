@@ -21,6 +21,7 @@ Os agentes "pensam" usando modelos de linguagem avançados. O sistema agora supo
 - **ChatGPT (OpenAI)**: Crie uma conta em [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys) e gere uma "secret key" (`sk-...`).
 - **Gemini (Google)**: Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey), faça login com sua conta Google e crie uma API Key.
 - **Claude (Anthropic)**: Crie uma conta no [Anthropic Console](https://console.anthropic.com/settings/keys) e gere uma API Key (`sk-ant-...`).
+- **Ollama (Local)**: Tenha o Ollama rodando localmente (ex: `ollama run gemma4`). Não requer chave, apenas preencha com a URL (geralmente `http://localhost:11434`).
 
 *Guarde a sua chave em um local seguro após a criação.*
 
@@ -83,8 +84,8 @@ python gui.py
 
 ### Passo 2: Escolher a IA e Configurar o Token
 Com a janela do SAVA aberta:
-1. Na seção **"1. Seleção da Inteligência Artificial"**, escolha qual IA você deseja utilizar (ChatGPT, Gemini ou Claude).
-2. Na seção **"2. Configuração da API"**, cole a sua chave secreta correspondente ao provedor escolhido no campo de texto.
+1. Na seção **"1. Seleção da Inteligência Artificial"**, escolha qual IA você deseja utilizar (ChatGPT, Gemini, Claude ou Ollama).
+2. Na seção **"2. Configuração da API"**, cole a sua chave secreta correspondente (ou a URL `http://localhost:11434` no caso do Ollama).
 3. Clique no botão azul **"Salvar no Windows"**.
 *(Nota: O sistema salva sua chave no Registro do Windows. Você só precisará fazer isso na primeira vez para cada provedor que utilizar!)*
 

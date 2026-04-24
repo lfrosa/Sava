@@ -21,6 +21,15 @@ def create_sava_crew(provider="openai", model=None):
         llm = model if model else "gemini/gemini-2.5-pro"
     elif provider == "anthropic":
         llm = model if model else "anthropic/claude-3-5-sonnet-20240620"
+    elif provider == "ollama":
+        base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        # A integração nativa do Ollama no CrewAI/LiteLLM usa a URL base sem /v1
+        if base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        os.environ["OLLAMA_API_BASE"] = base_url
+        _model = model if model else "gemma4"
+        # O CrewAI espera uma string no formato 'provedor/modelo'
+        llm = f"ollama/{_model}"
 
     # ==========================================
     # 1. Definição dos Agentes (Backstory & Tasks)
@@ -71,6 +80,24 @@ def create_sava_crew(provider="openai", model=None):
         llm=llm
     )
 
+    agente_resumidor = Agent(
+        role='Agente Resumidor',
+        goal='Criar um resumo executivo claro, destacando os pontos principais, a metodologia aplicada e as conclusões do documento.',
+        backstory='Especialista em síntese de textos acadêmicos. Você possui a habilidade de ler trabalhos longos e extrair sua essência rapidamente, facilitando a compreensão de seus pontos-chave.',
+        verbose=True,
+        allow_delegation=False,
+        llm=llm
+    )
+
+    agente_alteracoes = Agent(
+        role='Agente de Melhorias e Alterações',
+        goal='Demonstrar possíveis alterações práticas no texto, sugerindo reescritas para trechos confusos, redundantes ou com falhas de estilo.',
+        backstory='Revisor textual focado em aprimoramento de estilo e clareza. Você não apenas aponta o que está ruim, mas reescreve os trechos mostrando na prática o "antes e depois" para guiar o autor.',
+        verbose=True,
+        allow_delegation=False,
+        llm=llm
+    )
+
 
     # ==========================================
     # 2. Definição das Tarefas (Workflow)
@@ -106,10 +133,24 @@ def create_sava_crew(provider="openai", model=None):
         # Como precisa dos dados, roda após as tarefas assíncronas
     )
 
+    tarefa_resumo = Task(
+        description='Ler o documento {monografia_path} e gerar um resumo detalhado contendo o problema de pesquisa, metodologia, resultados principais e conclusão.',
+        expected_output='Um resumo executivo bem estruturado do trabalho acadêmico.',
+        agent=agente_resumidor
+    )
+
+    tarefa_alteracoes = Task(
+        description='Com base no documento {monografia_path} e nas análises anteriores, selecione trechos que precisam de melhoria e reescreva-os. Demonstre o trecho original e a nova sugestão de reescrita.',
+        expected_output='Um documento contendo exemplos práticos de reescrita e sugestões detalhadas de melhoria de estilo.',
+        agent=agente_alteracoes,
+        output_file='alteracoes_sugeridas.md'
+    )
+
     tarefa_revisao_final = Task(
-        description='Reunir o Relatório de Inconformidades (Normatizador), Nota de Auditoria (Analista de Dados), Score de Originalidade (Integridade) e Parecer Técnico (Metodológico). Organizar uma To-Do list crítica e emitir o status final: "Aprovado", "Aprovado com Ressalvas" ou "Reprovado". Avaliar também a clareza e elegância do texto.',
+        description='Reunir o Relatório de Inconformidades, Nota de Auditoria, Score de Originalidade, Parecer Técnico e o Resumo elaborado. Organizar uma To-Do list crítica e emitir o status final: "Aprovado", "Aprovado com Ressalvas" ou "Reprovado". Avaliar também a clareza e elegância do texto.',
         expected_output='O "Parecer de Qualificação Final" consolidado, com o status e a To-Do list para o autor.',
-        agent=agente_revisor_final
+        agent=agente_revisor_final,
+        output_file='parecer_final.md'
     )
 
     # ==========================================
@@ -122,6 +163,8 @@ def create_sava_crew(provider="openai", model=None):
             agente_analista_dados, 
             agente_integridade, 
             agente_metodologico, 
+            agente_resumidor,
+            agente_alteracoes,
             agente_revisor_final
         ],
         tasks=[
@@ -129,6 +172,8 @@ def create_sava_crew(provider="openai", model=None):
             tarefa_analise_dados, 
             tarefa_integridade, 
             tarefa_metodologica, 
+            tarefa_resumo,
+            tarefa_alteracoes,
             tarefa_revisao_final
         ],
         process=Process.sequential,

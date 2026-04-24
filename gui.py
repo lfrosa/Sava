@@ -28,6 +28,8 @@ def get_env_var_name(provider):
         return "GEMINI_API_KEY"
     elif provider == "Claude (Anthropic)":
         return "ANTHROPIC_API_KEY"
+    elif provider == "Ollama (Local)":
+        return "OLLAMA_BASE_URL"
     return "OPENAI_API_KEY"
 
 def get_provider_id(provider_str):
@@ -37,6 +39,8 @@ def get_provider_id(provider_str):
         return "gemini"
     elif provider_str == "Claude (Anthropic)":
         return "anthropic"
+    elif provider_str == "Ollama (Local)":
+        return "ollama"
     return "openai"
 
 def on_ai_change(event):
@@ -59,12 +63,24 @@ def on_ai_change(event):
         combo_model.config(values=modelos, state="readonly")
         combo_model.set(modelos[0])
         label_token.config(text="Sua Chave Claude (sk-ant-...):")
+    elif provider == "Ollama (Local)":
+        modelos = ["gemma4", "llama3", "mistral"]
+        combo_model.config(values=modelos, state="readonly")
+        combo_model.set(modelos[0])
+        label_token.config(text="URL do Ollama (Ex: http://localhost:11434):")
         
+    if provider == "Ollama (Local)":
+        entry_token.config(show="")
+    else:
+        entry_token.config(show="*")
+
     # Limpa e tenta preencher com o token existente
     entry_token.delete(0, tk.END)
     token_existente = get_env_var_windows(env_var)
     if token_existente:
         entry_token.insert(0, token_existente)
+    elif provider == "Ollama (Local)":
+        entry_token.insert(0, "http://localhost:11434")
 
 def salvar_token():
     token = entry_token.get().strip()
@@ -153,7 +169,7 @@ frame_ai = tk.LabelFrame(janela, text="1. Seleção da Inteligência Artificial"
 frame_ai.pack(fill="x", pady=5)
 
 tk.Label(frame_ai, text="Escolha a IA:").pack(side="left")
-opcoes_ai = ["ChatGPT (OpenAI)", "Gemini (Google)", "Claude (Anthropic)"]
+opcoes_ai = ["ChatGPT (OpenAI)", "Gemini (Google)", "Claude (Anthropic)", "Ollama (Local)"]
 combo_ai = ttk.Combobox(frame_ai, values=opcoes_ai, state="readonly", width=30)
 combo_ai.pack(side="left", padx=10)
 combo_ai.set(opcoes_ai[0]) # Default: ChatGPT
